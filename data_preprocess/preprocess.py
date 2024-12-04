@@ -82,8 +82,8 @@ def draw_plot_norm(input_frame, joints_tree, ax):
     ax.set_zlabel("z")
 
 def load_data(subject, episode):
-    pos_path = f'datasets/UI-PRMD/Segmented Movements/Kinect/Positions/m07_s{subject:02d}_e{episode:02d}_positions.txt'
-    ang_path = f'datasets/UI-PRMD/Segmented Movements/Kinect/Angles/m07_s{subject:02d}_e{episode:02d}_angles.txt'
+    pos_path = f'datasets/UI-PRMD/Incorrect Segmented Movements/Kinect/Positions/m07_s{subject:02d}_e{episode:02d}_positions_inc.txt'
+    ang_path = f'datasets/UI-PRMD/Incorrect Segmented Movements/Kinect/Angles/m07_s{subject:02d}_e{episode:02d}_angles_inc.txt'
     joints_number = 22
     joint_dim = 3
     frames_number = 63
@@ -218,9 +218,14 @@ if __name__ == '__main__':
 
     temp = np.zeros((63, 66))
 
+    tot = 0
+
+    hsyhsy = np.zeros((70, 75, 66))
+
     for subject in subjects:
         for episode in range(1, episodes + 1):
             temp = load_data(subject, episode)
+            tot += temp.shape[0]
             temp = cubic_interpolation(temp, 75)
             data_norm.append(temp)
 
@@ -230,10 +235,22 @@ if __name__ == '__main__':
         for j in range(1, 10 + 1):
             plt.subplot(7, 10, (i - 1) * 10 + j)
             plt.plot(data_norm[(i - 1) * 10 + j - 1])
+            hsyhsy[(i - 1) * 10 + j - 1, :, :] = data_norm[(i - 1) * 10 + j - 1]
+
 
     # plt.cla()
     # plt.subplot(111)
     # plt.plot(data_norm[10])
     plt.show()
+
+    hsyhsy = hsyhsy.reshape(hsyhsy.shape[0], -1)
+
+    hsy_df = pd.DataFrame(data=hsyhsy)
+    # pd.DataFrame.to_csv(hsy_df, 'data_m07_incorrect.csv', header=False, index=False)
+
+    # tot = 0
+    # for item in data_norm:
+    #     tot += item.shape[0]
+    print(tot / 70.0)
 
 

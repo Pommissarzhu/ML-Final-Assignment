@@ -38,8 +38,8 @@ def draw_plot(input_frame, joints_tree, ax):
 
 
 
-pos_file_path = 'datasets/UI-PRMD/Movements/Kinect/Positions/m01_s01_positions.txt'
-ang_file_path = 'datasets/UI-PRMD/Movements/Kinect/Angles/m01_s01_angles.txt'
+pos_file_path = '../datasets/UI-PRMD/Movements/Kinect/Positions/m01_s01_positions.txt'
+ang_file_path = '../datasets/UI-PRMD/Movements/Kinect/Angles/m01_s01_angles.txt'
 
 pos_raw = pd.read_csv(pos_file_path, delim_whitespace=True, header=None)
 ang_raw = pd.read_csv(ang_file_path, delim_whitespace=True, header=None)
