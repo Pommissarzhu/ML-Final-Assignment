@@ -7,6 +7,14 @@ import os
 import time
 from datetime import datetime
 import pandas as pd
+import matplotlib.pyplot as plt
+
+class Sampling(tf.keras.layers.Layer):
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        epsilon = K.random_normal(shape=(K.shape(z_mean)[0], K.shape(z_mean)[1]), mean=0., stddev=1.0)
+        return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
 
 class VAEGRU:
     def __init__(self, time_steps=75, feature_dim=66, latent_dim=16, learning_rate=1e-4):
@@ -23,13 +31,8 @@ class VAEGRU:
         x = GRU(32, return_sequences=False)(inputs)
         z_mean = Dense(self.latent_dim)(x)
         z_log_var = Dense(self.latent_dim)(x)
-        z = Lambda(self.sampling)([z_mean, z_log_var])
+        z = Sampling()([z_mean, z_log_var])
         return Model(inputs, [z_mean, z_log_var, z], name='encoder')
-
-    def sampling(self, args):
-        z_mean, z_log_var = args
-        epsilon = K.random_normal(shape=(K.shape(z_mean)[0], self.latent_dim), mean=0., stddev=1.0)
-        return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
     def build_decoder(self):
         decoder_inputs = Input(shape=(self.latent_dim,))
@@ -71,7 +74,7 @@ class VAEGRU:
             print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}, Time: {end_time - start_time:.2f} seconds")
 
             # 每隔10个epoch保存一次checkpoint
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 100 == 0:
                 checkpoint_path = os.path.join(checkpoint_dir, f'vae_checkpoint_epoch_{epoch + 1}')
                 self.vae.save(checkpoint_path)
 
@@ -84,6 +87,25 @@ class VAEGRU:
         # 保存编码器和解码器
         self.encoder.save(os.path.join(save_dir, 'encoder'))
         self.decoder.save(os.path.join(save_dir, 'decoder'))
+
+    @staticmethod
+    def load_and_infer(model_dir='saved_model', test_data=None, time_steps=75, feature_dim=66, output_image_path='reconstruction.png'):
+        # 加载模型
+        loaded_vae = tf.keras.models.load_model(os.path.join(model_dir, 'vae'), custom_objects={'Sampling': Sampling})
+        # 使用虚拟测试数据进行推理
+        test_data = np.random.rand(1, time_steps, feature_dim).astype(np.float32)
+        reconstructed_data = loaded_vae.predict(test_data)
+
+        # 使用matplotlib显示结果
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(time_steps), test_data[0, :, 0], label='Original')
+        plt.plot(range(time_steps), reconstructed_data[0, :, 0], label='Reconstructed')
+        plt.xlabel('Time Steps')
+        plt.ylabel('Feature Value (Dim 0)')
+        plt.title('Original vs Reconstructed Time Series')
+        plt.legend()
+        plt.savefig(output_image_path)
+        plt.close()
 
 def data_loader():
     data_raw = pd.read_csv('data_m07_correct.csv', header=None)
@@ -109,7 +131,10 @@ if __name__ == "__main__":
     data = data_loader()
 
     # 训练模型
-    vae_gru.train(data, epochs=1000, batch_size=8)
+    # vae_gru.train(data, epochs=1000, batch_size=8)
 
     # 保存模型
-    vae_gru.save_model()
+    # vae_gru.save_model()
+
+    # 加载模型并进行推理
+    VAEGRU.load_and_infer(model_dir='saved_model', time_steps=TIME_STEPS, feature_dim=FEATURE_DIM)
