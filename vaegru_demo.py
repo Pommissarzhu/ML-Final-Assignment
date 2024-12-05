@@ -56,6 +56,15 @@ class VAEGRU(tf.keras.Model):
         )
         return reconstruction_loss + kl_loss
 
+def data_loader():
+    data_raw = pd.read_csv('data_m07_correct.csv', header=None)
+    data_inc_raw = pd.read_csv('data_m07_incorrect.csv', header=None)
+    data = np.array(data_raw).astype('float32')
+    data_inc = np.array(data_inc_raw).astype('float32')
+    data = data.reshape((-1, 75, 66))
+    data_inc = data_inc.reshape((-1, 75, 66))
+    return data, data_inc
+
 # 超参数设置
 sequence_length = 75
 feature_dim = 66
