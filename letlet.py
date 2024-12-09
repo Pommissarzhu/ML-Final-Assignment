@@ -16,17 +16,18 @@ class LetVaeGru(tf.keras.Model):
         # encoder
         self.lstm_1 = LSTM(units=64, return_sequences=True, activation='tanh')
         self.lstm_2 = LSTM(units=32, return_sequences=True, activation='tanh')
-        self.lstm_3 = LSTM(units=16, return_sequences=True, activation='tanh')
+        self.lstm_3 = LSTM(units=16, return_sequences=False, activation='tanh')
         self.z_mean = Dense(units=self.latent_sequence)
         self.z_log_var = Dense(units=self.latent_sequence)
 
         # decoder
-        self.dense1 = Dense(units=16, activation='relu')
+        self.dense1 = Dense(units=self.time_step * 16, activation='relu')
         self.reshape = Reshape((self.time_step, 16))
         self.lstm_4 = LSTM(units=16, return_sequences=True, activation='tanh')
         self.lstm_5 = LSTM(units=32, return_sequences=True, activation='tanh')
         self.lstm_6 = LSTM(units=64, return_sequences=True, activation='tanh')
-        self.lstm_7 = LSTM(units=self.feature_dim, return_sequences=True, activation='tanh')
+        # self.lstm_7 = LSTM(units=self.feature_dim, return_sequences=True, activation='tanh')
+        self.dense2 = Dense(units=self.feature_dim, activation='relu')
 
     def reparameterize(self, mean, log_var):
         # 从标准正态分布中采样 epsilon
@@ -38,7 +39,7 @@ class LetVaeGru(tf.keras.Model):
         return z
 
     def encode(self, x):
-        x = self.lstm_1(x)
+        # x = self.lstm_1(x)
         x = self.lstm_2(x)
         x = self.lstm_3(x)
         z_mean = self.z_mean(x)
@@ -51,8 +52,9 @@ class LetVaeGru(tf.keras.Model):
         z = self.reshape(z)
         z = self.lstm_4(z)
         z = self.lstm_5(z)
-        z = self.lstm_6(z)
-        z = self.lstm_7(z)
+        # z = self.lstm_6(z)
+        # z = self.lstm_7(z)
+        z = self.dense2(z)
         return z
 
     def call(self, inputs, **kwargs):
@@ -87,7 +89,7 @@ def compute_loss(x, x_pred, z_mean, z_log_var):
     reconstruction_loss = tf.reduce_mean(reconstruction_loss)  # 输出标量
 
     # KL 散度损失
-    kl_loss = -0.5 * tf.reduce_sum(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=-1)
+    kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=-1)
     kl_loss = tf.reduce_mean(kl_loss)
 
     # 总的 VAE 损失
@@ -134,7 +136,7 @@ def train():
         with tf.GradientTape() as tape:
             x_pred, mean, log_var = model(data)
             loss = compute_loss(data, x_pred, mean, log_var)
-            loss = tf.reduce_mean(loss)
+            # loss = tf.reduce_mean(loss)
 
             print("batch:", batch_index, "loss:", loss.numpy())
 
@@ -149,9 +151,9 @@ def train():
 
 time_step = 75
 feature_dim = 66
-latent_sequence = 4
+latent_sequence = 16
 
-num_epochs = 1000
+num_epochs = 10000
 batch_size = 10
 learning_rate = 1e-4
 
